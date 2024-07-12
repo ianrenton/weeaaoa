@@ -20,7 +20,11 @@ DATA_FILE = ".cache/data.json"
 # File to use for geo data caching. If it exists, data will be loaded from it instead of running the processing. To
 # force re-running the processing, just delete this file.
 GEO_DATA_FILE = ".cache/geodata.json"
+# File to output results to
 RESULT_FILE = "output.json"
+# When converting a circle to a polygon, how many points should be used around the edge? Larger numbers mean longer
+# processing times, but more accurate results.
+CIRCLE_TO_POLY_POINTS = 128
 
 # Static defines
 SOTA_ASSOC_BASE_URL = "https://api2.sota.org.uk/api/associations/"
@@ -30,7 +34,6 @@ BUNKERS_URL = "https://drive.google.com/uc?id=1ea3j9S4VzcDttMPs_9WOj-4L_DzfcUhR"
 LIGHTHOUSES_URL = "https://ecaelastats.site/ela_refs.php"
 CASTLES_URL = "https://ecaelastats.site/eca_refs.php"
 ECL_ECA_FETCH_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0"
-CIRCLE_TO_POLY_POINTS = 128
 SUMMIT_RADIUS_METRES = 250
 BUNKER_RADIUS_METRES = 1000
 LIGHTHOUSE_RADIUS_METRES = 1000
@@ -194,10 +197,12 @@ for feature in gdf_with_overlap_polys.iterfeatures():
             east_dist = abs(test_point.y - test_entity["easting"])
             dist = math.sqrt(east_dist * east_dist + north_dist * north_dist)
             if dist < test_entity["radiusMetres"]:
-                overlapping_entity_names.append(test_entity["ref"] + " " + test_entity["name"])
-        test_point_wgs84 = OS_GRID_TO_WGS84_TRANSFORMER.transform(test_point.x, test_point.y)
-        overlap_data.append({"lat": test_point_wgs84[0],
-                             "lon": test_point_wgs84[1],
+                overlapping_entity_names.append(test_entity["type"] + " " + test_entity["ref"] + " " + test_entity["name"])
+        poly_coords = feature["geometry"]["coordinates"][0]
+        poly_coords_wgs84 = []
+        for xy in poly_coords:
+            poly_coords_wgs84.append(OS_GRID_TO_WGS84_TRANSFORMER.transform(xy[0], xy[1]))
+        overlap_data.append({"polygon": poly_coords_wgs84,
                              "entities": overlapping_entity_names})
 
 runtime = datetime.now() - start
@@ -207,8 +212,8 @@ print("Assessed " + str(len(gdf_with_overlap_polys.index)) + " overlap polys in 
 # Sort overlap data by number of entities
 overlap_data_sorted = sorted(overlap_data, key=lambda p: len(p["entities"]), reverse=True)
 print("Top 5 regions by overlapping entity count:")
-for i in range(0, 4):
-    print(str(overlap_data_sorted[i]["lat"]) + " " + str(overlap_data_sorted[i]["lon"]) + " " + str(
+for i in range(0, 5):
+    print(str(overlap_data_sorted[i]["polygon"][0][0]) + " " + str(overlap_data_sorted[i]["polygon"][0][1]) + " " + str(
         len(overlap_data_sorted[i]["entities"])) + " " + str(overlap_data_sorted[i]["entities"]))
 
 print("\nWriting results file...")
