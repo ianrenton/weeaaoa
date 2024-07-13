@@ -22,6 +22,9 @@ DATA_FILE = ".cache/data.json"
 GEO_DATA_FILE = ".cache/geodata.json"
 # File to output results to
 RESULT_FILE = "output.json"
+# To reduce output file size and processing time, ignore any regions that are overlaps, but of fewer than this number
+# of entities.
+MIN_OVERLAP_TO_REPORT = 4
 # When converting a circle to a polygon, how many points should be used around the edge? Larger numbers mean longer
 # processing times, but more accurate results.
 CIRCLE_TO_POLY_POINTS = 128
@@ -189,7 +192,7 @@ print("Getting entity lists for overlap polygons...")
 start = datetime.now()
 overlap_data = []
 for feature in gdf_with_overlap_polys.iterfeatures():
-    if feature["properties"]["layers"] > 1:
+    if feature["properties"]["layers"] >= MIN_OVERLAP_TO_REPORT:
         test_point = shape(feature["geometry"]).representative_point()
         overlapping_entity_names = []
         for test_entity in all_data:
